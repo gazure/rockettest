@@ -1,30 +1,21 @@
-use rocket::serde::uuid::Uuid;
-use rocket::tokio::sync::Mutex;
-use std::collections::HashMap;
-use rocket::State;
+use uuid::Uuid;
 use rocket::serde::json::Json;
 use rocket::serde::json::{Value, json};
 use rocket::serde::{Serialize, Deserialize};
-use rocket::form::{Form};
-use rocket::response::status::{Unauthorized, BadRequest, NoContent};
+use rocket::http::Status;
+use rocket::response::status::{BadRequest, NoContent};
 use std::borrow::Cow;
 
-mod client;
-use client::Client;
 
+pub mod error;
+pub mod client;
+pub mod grant_types;
+pub mod forms;
+mod server;
 
-type ClientsMap = Mutex<HashMap<Uuid, client::Client>>;
-type Clients<'r> = &'r State<ClientsMap>;
-
-#[allow(dead_code)]
-#[derive(Debug, FromForm)]
-struct TokenRequest<'r> {
-	client_id: Uuid,
-	client_secret: String,
-	grant_type: &'r str,
-	scope: &'r str,
-	user_id: Option<&'r str>,
-}
+use error::Error;
+use client::{Client, Clients};
+use forms::TokenRequestForm;
 
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -35,47 +26,49 @@ struct RegisterRequest<'r> {
 }
 
 #[post("/token", data = "<token_request>")]
-fn token(token_request: Option<Form<TokenRequest<'_>>>) -> Result<Value, Unauthorized<Value>>  {
-	println!("{:?}", token_request);	
-	match token_request {
-		Some(token_request) => Ok(json!({
-			"client_id": token_request.client_id,
-			"route": "/token"
-		})),
-		None => Err(Unauthorized(Some(json!({
-			"status": "unauthorized",
-			"code": 401,
-		}))))
-	}
+async fn token(token_request: TokenRequestForm<'_>, clients: Clients<'_>) -> Result<Value, Status> {
+
+	let oauth_server = server::Server::new();
+	let token = oauth_server.token(token_request, clients).await.map_err(|e| {
+		match e {
+			Error::InvalidSecret => Status::Unauthorized,
+			Error::InvalidClient => Status::Unauthorized,
+			Error::RateLimited => Status::Forbidden,
+			Error::InvalidGrantType => Status::BadRequest,
+			Error::InvalidToken => Status::InternalServerError,
+			Error::InvalidClientName => Status::BadRequest,
+		}
+	})?;
+	Ok(json!(token))
 }
 
 #[post("/clients", data = "<client_request>")]
-async fn register(client_request: Json<RegisterRequest<'_>>, clients: Clients<'_>) -> Result <Json<Client>, BadRequest<Value>> {
-	let client = client::Client::new(client_request.name.to_string(), client_request.description.to_string());
-
-	let mut clients = clients.lock().await;
-	clients.insert(client.client_id.clone(), client.clone());
-
+async fn register(client_request: Json<RegisterRequest<'_>>, clients: Clients<'_>) -> Result<Json<Client>, BadRequest<Value>> {
+	let client = clients.register(client_request.name.to_string(), client_request.description.to_string())
+		.await
+		.map_err(|_| BadRequest(Some(json!("name already taken?"))))?;
 	Ok(Json(client))
 }
 
 #[get("/clients/<id>")]
 async fn get_client(id: Uuid, clients: Clients<'_>) -> Option<Json<Client>> {
-	let clients = clients.lock().await;
-	let client = clients.get(&id)?;
-	Some(Json(client.clone()))
+	Some(Json(clients.get(&id).await?))
 }
 
 
 #[delete("/clients/<id>")]
 async fn delete_client(id: Uuid, clients: Clients<'_>) -> NoContent {
-	let mut clients = clients.lock().await;
-
-	if clients.contains_key(&id) {
-		clients.remove(&id);
-	}
-
+	clients.delete(id).await;
 	NoContent
+}
+
+
+#[catch(400)]
+fn bad_request() -> Value {
+	json!({
+		"status": 400,
+		"reason": "bad request"
+	})
 }
 
 #[catch(404)]
@@ -86,10 +79,34 @@ fn not_found() -> Value {
     })
 }
 
+#[catch(401)]
+fn unauthorized() -> Value {
+	json!({
+		"status": 401,
+		"reason": "unauthorized"
+	})
+}
+
+#[catch(403)]
+fn forbidden() -> Value {
+	json!({
+		"status": 403,
+		"reason": "forbidden"
+	})
+}
+
+#[catch(500)]
+fn internal_server_error() -> Value {
+	json!({
+		"status": 500,
+		"reason": "internal server error"
+	})
+}
+
 pub fn stage() -> rocket::fairing::AdHoc {
 	rocket::fairing::AdHoc::on_ignite("oauth", |rocket| async {
 		rocket.mount("/oauth", routes![token, register, get_client, delete_client])
-			.register("/oauth", catchers![not_found])
-			.manage(ClientsMap::new(HashMap::new()))
+			.register("/oauth", catchers![not_found, unauthorized, forbidden, bad_request, internal_server_error])
+			.manage(client::init_state())
     })
 }
