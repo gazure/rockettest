@@ -1,3 +1,4 @@
+use chrono;
 use hmac::{Hmac, Mac};
 use sha2::Sha256;
 use jwt::SignWithKey;
@@ -10,6 +11,7 @@ use crate::oauth::grant_types::GrantType;
 
 pub struct Generator{}
 
+const TOKEN_TTL: i64 = 3600;
 
 impl Generator {
     pub fn new() -> Self {
@@ -23,9 +25,10 @@ impl Generator {
                 let key: Hmac<Sha256> = Hmac::new_from_slice(b"some-secret").unwrap();
                 let mut claims = BTreeMap::new();
                 let client_id_string = client.id.to_string();
-                let iat = 0.to_string();
-                let exp = 0.to_string();
-
+                let now = chrono::offset::Utc::now().timestamp();
+                let iat = now.to_string();
+                let exp = (now + TOKEN_TTL).to_string();
+            
                 claims.insert("iat", &iat);
                 claims.insert("exp", &exp);
                 claims.insert("client_id", &client_id_string);
@@ -33,7 +36,7 @@ impl Generator {
 
                 Ok(Token{
                     access_token: token_str,
-                    expires_in: 3600,
+                    expires_in: TOKEN_TTL,
                     refresh_token: "".to_string(),
                     scope: "".to_string(),
                 })
@@ -46,7 +49,7 @@ impl Generator {
 #[serde(crate = "rocket::serde")]
 pub struct Token {
     pub access_token: String,
-    pub expires_in: i32,
+    pub expires_in: i64,
 
     #[serde(skip_serializing_if = "String::is_empty")]
     pub scope: String,

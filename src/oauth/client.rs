@@ -10,26 +10,21 @@ use crate::oauth::error::Error;
 
 type ClientsMap = Mutex<HashMap<Uuid, Client>>;
 pub type Clients<'r> = &'r State<ClientStorage>;
-
-pub struct ClientStorage {
-	pub map: ClientsMap,
-}
+pub struct ClientStorage (ClientsMap);
 
 impl ClientStorage {
 
 	pub fn new() -> Self{
-		Self {
-			map: ClientsMap::new(HashMap::new()),
-		}
+		Self (ClientsMap::new(HashMap::new()))
 	}
 
 	pub async fn get(&self, client_id: &Uuid) -> Option<Client> {
-		let clients = self.map.lock().await;
+		let clients = self.0.lock().await;
 		Some(clients.get(&client_id)?.clone())
 	}
 
 	pub async fn update(&self, client: Client) {
-		let mut clients = self.map.lock().await;
+		let mut clients = self.0.lock().await;
 		clients.entry(client.id.clone()).and_modify(|c| *c = client);
 	}
 
@@ -38,14 +33,14 @@ impl ClientStorage {
 			return Err(Error::InvalidClientName);
 		}
 
-		let mut clients = self.map.lock().await;
+		let mut clients = self.0.lock().await;
 		let client = Client::new(name, description);
 		clients.insert(client.id.clone(), client.clone());
 		Ok(client)
 	}
 
 	pub async fn delete(&self, id: Uuid) {
-		self.map.lock().await.remove(&id);
+		self.0.lock().await.remove(&id);
 	}
 }
 
@@ -98,6 +93,11 @@ impl Client {
 	}
 }
 
-pub fn init_state() -> ClientStorage {
-	ClientStorage::new()
+pub async fn init_state() -> ClientStorage {
+	let client_storage = ClientStorage::new();
+	let mut client = Client::new(String::from("Grant"), String::from("Grant Azure"));
+	client.id = Uuid::parse_str("f452faa7-cbe0-437b-97ff-c53049b0f710").unwrap();
+	client.secret = String::from("5a02dd7d0e66aa5c9224bd0dc09d25ef2fa880a8d66f13a0312113938a2f4701");
+	client_storage.update(client).await;
+	client_storage
 }
