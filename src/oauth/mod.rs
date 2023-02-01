@@ -53,6 +53,8 @@ impl ClientJwt {
 	}
 }
 
+
+// Rocket request guard for validating jwts
 #[rocket::async_trait]
 impl<'r> FromRequest<'r> for ClientJwt {
 	type Error = Error;
@@ -87,7 +89,7 @@ impl<'r> FromRequest<'r> for ClientJwt {
 #[post("/token", data = "<token_request>")]
 async fn token(token_request: TokenRequestForm<'_>, clients: Clients<'_>) -> Result<Value, Status> {
 	let oauth_server = server::Server::new();
-	let token = oauth_server.token(token_request, clients).await.map_err(|e|<Error as Into<Status>>::into(e))?;
+	let token = oauth_server.token(token_request, clients).await.map_err(|e: Error| e.into())?;
 	Ok(json!(token))
 }
 
@@ -105,7 +107,7 @@ async fn register(client_request: Json<RegisterRequest<'_>>, clients: Clients<'_
 
 #[get("/clients/<id>")]
 async fn get_client(id: Uuid, clients: Clients<'_>, auth: ClientJwt) -> Result<Json<Client>, Status> {
-	auth.authorize_for(&id).map_err(|e|<Error as Into<Status>>::into(e))?;
+	auth.authorize_for(&id).map_err(|e:Error| e.into())?;
 	clients.get(&id).await.map_or(Err(Status::NotFound), |client| Ok(Json(client)))
 }
 
@@ -117,52 +119,10 @@ async fn delete_client(id: Uuid, clients: Clients<'_>, auth: ClientJwt) -> Resul
 	Ok(NoContent)
 }
 
-
-#[catch(400)]
-fn bad_request() -> Value {
-	json!({
-		"status": 400,
-		"reason": "bad request"
-	})
-}
-
-#[catch(404)]
-fn not_found() -> Value {
-    json!({
-        "status": 404,
-        "reason": "not found"
-    })
-}
-
-#[catch(401)]
-fn unauthorized() -> Value {
-	json!({
-		"status": 401,
-		"reason": "unauthorized"
-	})
-}
-
-#[catch(403)]
-fn forbidden() -> Value {
-	json!({
-		"status": 403,
-		"reason": "forbidden"
-	})
-}
-
-#[catch(500)]
-fn internal_server_error() -> Value {
-	json!({
-		"status": 500,
-		"reason": "internal server error"
-	})
-}
-
 pub async fn stage() -> rocket::fairing::AdHoc {
 	let client_storage = client::init_state().await;
 	rocket::fairing::AdHoc::on_ignite("oauth", |rocket| async {
 		rocket.mount("/oauth", routes![token, register, get_client, delete_client])
-			.register("/oauth", catchers![not_found, unauthorized, forbidden, bad_request, internal_server_error])
 			.manage(client_storage)
     })
 }
