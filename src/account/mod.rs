@@ -64,7 +64,7 @@ async fn settings(context: LoggedIn, accounts: account::Accounts<'_>) -> Result<
     let account = accounts.get(&context.user_id)
         .await
         .ok_or(Status::Unauthorized)?;
-    
+    println!("{:?}", account);
     Ok(json!({"username": account.username}))
 }
 

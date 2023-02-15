@@ -1,4 +1,5 @@
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate rocket;
 
 use rocket::response::status::Custom;
 use rocket::http::Status;
@@ -18,7 +19,6 @@ fn health() -> Value {
         "status": "ok"
     })
 }
-
 
 // rocket route that returns dynamic status code
 #[get("/status/<code>")]
@@ -81,4 +81,79 @@ async fn rocket() -> _ {
         .attach(account::stage().await)
         .register("/oauth", catchers![not_found, unauthorized, forbidden, bad_request, internal_server_error])
         .mount("/", routes![index, health, status])
+}
+
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use rocket::local::asynchronous::Client;
+    use rocket::http::Status;
+    use rocket::serde::json::Value;
+
+    #[rocket::async_test]
+    async fn test_index() {
+        let client = Client::tracked(rocket().await).await.unwrap();
+        let response = client.get(uri!(super::index)).dispatch().await;
+        assert_eq!(response.status(), Status::Ok);
+        assert_eq!(response.into_string().await.unwrap(), "{}");
+    }
+
+    #[rocket::async_test]
+    async fn test_health() {
+        let client = Client::tracked(rocket().await).await.unwrap();
+        let response = client.get(uri!(super::health)).dispatch().await;
+        assert_eq!(response.status(), Status::Ok);
+        assert_eq!(
+            response.into_json::<Value>().await.unwrap(),
+            json!({
+                "status": "ok"
+            })
+        );
+    }
+
+    #[rocket::async_test]
+    async fn test_status() {
+        let client = Client::tracked(rocket().await).await.unwrap();
+        let response = client.get(uri!(super::status(200))).dispatch().await;
+        assert_eq!(response.status(), Status::Ok);
+        assert_eq!(
+            response.into_json::<Value>().await.unwrap(),
+            json!({
+                "status": 200,
+            })
+        );
+        let response = client.get(uri!(super::status(401))).dispatch().await;
+        assert_eq!(response.status(), Status::Unauthorized);
+        assert_eq!(
+            response.into_json::<Value>().await.unwrap(),
+            json!({
+                "status": 401,
+            })
+        );
+        let response = client.get(uri!(super::status(301))).dispatch().await;
+        assert_eq!(response.status(), Status::MovedPermanently);
+        assert_eq!(
+            response.into_json::<Value>().await.unwrap(),
+            json!({
+                "status": 301,
+            })
+        );
+        let response = client.get(uri!(super::status(418))).dispatch().await;
+        assert_eq!(response.status(), Status::ImATeapot);
+        assert_eq!(
+            response.into_json::<Value>().await.unwrap(),
+            json!({
+                "status": 418,
+            })
+        );
+        let response = client.get(uri!(super::status(504))).dispatch().await;
+        assert_eq!(response.status(), Status::GatewayTimeout);
+        assert_eq!(
+            response.into_json::<Value>().await.unwrap(),
+            json!({
+                "status": 504,
+            })
+        );
+    }
 }

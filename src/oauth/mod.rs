@@ -1,12 +1,10 @@
 use uuid::Uuid;
 use rocket::serde::json::Json;
 use rocket::serde::json::{Value, json};
-use rocket::serde::{Serialize, Deserialize};
 use rocket::http::Status;
 use rocket::response::status::{BadRequest, NoContent};
 use rocket::request::{self, Outcome, Request, FromRequest};
 use jwt::{Header, Token, VerifyWithKey, token as jwt_token};
-use std::borrow::Cow;
 use std::collections::BTreeMap;
 use hmac::{Hmac, Mac};
 use sha2::Sha256;
@@ -15,19 +13,12 @@ pub mod error;
 pub mod client;
 pub mod grant_types;
 pub mod forms;
-mod server;
+pub mod server;
 
 use error::Error;
 use client::{Client, Clients};
-use forms::TokenRequestForm;
+use forms::{RegisterRequest, TokenRequestForm};
 
-
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(crate = "rocket::serde")]
-struct RegisterRequest<'r> {
-	name: Cow<'r, str>,
-	description: Cow<'r, str>,
-}
 
 struct ClientJwt (Token<Header, BTreeMap<String, String>, jwt_token::Verified>);
 
@@ -125,4 +116,63 @@ pub async fn stage() -> rocket::fairing::AdHoc {
 		rocket.mount("/oauth", routes![token, register, get_client, delete_client])
 			.manage(client_storage)
     })
+}
+
+#[cfg(test)]
+mod test {
+    use rocket::local::asynchronous::Client;
+    use rocket::serde::json::json;
+    use rocket::http::{Status, ContentType, Header};
+    use uuid::Uuid;
+
+    #[rocket::async_test]
+    async fn test_get_client_unauthorized() {
+        let rocket = rocket::build().attach(super::stage().await);
+        let client = Client::tracked(rocket).await.unwrap();
+
+        let response = client.get("/oauth/clients/00000000-0000-0000-0000-000000000000").dispatch().await;
+        assert_eq!(response.status(), Status::Unauthorized);
+    }
+
+    #[rocket::async_test]
+    async fn test_register_client() {
+        let rocket = rocket::build().attach(super::stage().await);
+        let test_client = Client::tracked(rocket).await.unwrap();
+
+        let response = test_client.post("/oauth/clients")
+            .header(ContentType::JSON)
+            .body(json!({
+                "name": "test",
+                "description": "test"
+            }).to_string())
+            .dispatch().await;
+
+        assert_eq!(response.status(), Status::Ok);
+        
+        let client = response.into_json::<super::client::Client>().await.unwrap();
+        assert_eq!(client.name, "test");
+        assert_eq!(client.description, "test");
+
+        let response = test_client.post("/oauth/token")
+            .header(ContentType::Form)
+            .body(format!("grant_type=client_credentials&scope=openid&client_id={}&client_secret={}", client.id, client.secret))
+            .dispatch().await;
+
+        assert_eq!(response.status(), Status::Ok);
+
+        let token = response.into_json::<super::server::generators::Token>().await.unwrap();
+        
+        // assert_eq!(token.token_type, "Bearer");
+        assert_eq!(token.expires_in, 3600);
+        assert_eq!(token.scope, "openid");
+
+        let response = test_client.get(format!("/oauth/clients/{}", client.id))
+            .header(Header::new("Authorization", format!("Bearer {}", token.access_token)))
+            .dispatch().await;
+
+        assert_eq!(response.status(), Status::Ok);
+        let retrieved_client = response.into_json::<super::client::Client>().await.unwrap();
+        assert_eq!(retrieved_client.id, client.id);
+            
+    }
 }

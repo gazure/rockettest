@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use rocket::State;
 use rocket::serde::uuid::Uuid;
 use rocket::http::Status;
+use bcrypt;
 
 /// TODO: Move this
 #[allow(dead_code)]
@@ -40,16 +41,16 @@ pub struct Account {
 
 impl Account {
     pub fn new(username: String, password: String) -> Self {
+        let password = bcrypt::hash(password.as_bytes(), bcrypt::DEFAULT_COST).unwrap();
         Self {
             id: Uuid::new_v4(),
-            username: username,
-            password: password,
+            username,
+            password
         }
     }
 
     pub fn verify_password(&self, password: &str) -> bool {
-        // TODO: Hash password
-        self.password == password
+        bcrypt::verify(password, &self.password).unwrap()
     }
 }
 

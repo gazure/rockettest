@@ -48,7 +48,7 @@ impl ClientStorage {
 #[serde(crate = "rocket::serde")]
 pub struct Client {	
 	pub id: Uuid,
-	secret: String,
+	pub secret: String,
 	pub name: String,
 	pub description: String,
 	#[serde(skip)]

@@ -37,8 +37,8 @@ impl Generator {
                 Ok(Token{
                     access_token: token_str,
                     expires_in: TOKEN_TTL,
-                    refresh_token: "".to_string(),
-                    scope: "".to_string(),
+                    refresh_token: "x".to_string(),
+                    scope: "openid".to_string(),
                 })
             }
         }

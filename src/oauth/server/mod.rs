@@ -2,8 +2,8 @@ use super::client::Clients;
 use super::error::Error;
 use super::forms::TokenRequestForm;
 
-mod validators;
-mod generators;
+pub mod validators;
+pub mod generators;
 use validators::Validator;
 use generators::{Generator, Token};
 
