@@ -1,8 +1,8 @@
-use uuid::Uuid;
+use crate::oauth::client::{Client, Clients};
 use crate::oauth::error::Error;
 use crate::oauth::grant_types;
-use crate::oauth::client::{Client, Clients};
 use crate::oauth::scopes::Scope;
+use uuid::Uuid;
 
 pub fn validate_grant_type(grant_type: &str) -> Result<grant_types::GrantType, Error> {
     match grant_types::from_string(grant_type) {
@@ -11,8 +11,16 @@ pub fn validate_grant_type(grant_type: &str) -> Result<grant_types::GrantType, E
     }
 }
 
-pub async fn validate_client(clients: Clients<'_>, client_id: &Uuid, client_secret: &String) -> Result<Client, Error> {
-    let mut client = clients.get(client_id).await.ok_or(Error::InvalidClient)?.clone();
+pub async fn validate_client(
+    clients: Clients<'_>,
+    client_id: &Uuid,
+    client_secret: &String,
+) -> Result<Client, Error> {
+    let mut client = clients
+        .get(client_id)
+        .await
+        .ok_or(Error::InvalidClient)?
+        .clone();
     client.validate_secret(client_secret)?;
     client.increment_login_count();
     clients.update(client.clone()).await;
@@ -33,10 +41,10 @@ pub fn validate_scopes(scopes: &str) -> Result<Vec<Scope>, Error> {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::oauth::client::ClientStorage;
     use rocket::tokio;
     use rocket::State;
-    use crate::oauth::client::ClientStorage;
-    
+
     #[tokio::test]
     async fn test_validate_grant_type() {
         let grant_type = "client_credentials";
@@ -53,7 +61,9 @@ mod test {
 
         let client_id = client.id;
         let client_secret = client.secret;
-        let result = validate_client(clients, &client_id, &client_secret).await.unwrap();
+        let result = validate_client(clients, &client_id, &client_secret)
+            .await
+            .unwrap();
 
         assert_eq!(result.id, client_id);
         assert_eq!(result.secret, client_secret);
@@ -72,10 +82,9 @@ mod test {
         assert_eq!(scopes_parsed[3], Scope::Phone);
         assert_eq!(scopes_parsed[4], Scope::Address);
         assert_eq!(scopes_parsed[5], Scope::OfflineAccess);
-        
+
         let scopes = "";
         let scopes_parsed = validate_scopes(scopes).unwrap();
         assert_eq!(scopes_parsed.len(), 0);
     }
 }
-

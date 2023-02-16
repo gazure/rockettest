@@ -1,4 +1,4 @@
-use rocket::form::{Form};
+use rocket::form::Form;
 
 #[derive(Debug, FromForm)]
 pub struct LoginRequest<'r> {
@@ -6,4 +6,3 @@ pub struct LoginRequest<'r> {
     pub password: &'r str,
 }
 pub type LoginForm<'r> = Form<LoginRequest<'r>>;
-

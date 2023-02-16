@@ -1,4 +1,4 @@
-use  rocket::serde::{Serialize, Deserialize};
+use rocket::serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(crate = "rocket::serde")]
@@ -14,7 +14,12 @@ pub struct Token {
 }
 
 impl Token {
-    pub fn new(access_token: String, expires_in: i64, scope: String, refresh_token: Option<String>) -> Self {
+    pub fn new(
+        access_token: String,
+        expires_in: i64,
+        scope: String,
+        refresh_token: Option<String>,
+    ) -> Self {
         Self {
             token_type: "Bearer".to_string(),
             access_token,

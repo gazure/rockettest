@@ -1,14 +1,14 @@
+use rocket::http::Status;
+use rocket::serde::uuid::Uuid;
 use rocket::serde::{Deserialize, Serialize};
 use rocket::tokio::sync::Mutex;
-use std::collections::HashMap;
 use rocket::State;
-use rocket::serde::uuid::Uuid;
-use rocket::http::Status;
+use std::collections::HashMap;
 
 /// TODO: Move this
 #[allow(dead_code)]
 #[derive(Debug)]
-pub enum Error{
+pub enum Error {
     Username,
     Password,
     Account,
@@ -27,7 +27,7 @@ impl From<Error> for Status {
 
 type AccountMap = Mutex<HashMap<Uuid, Account>>;
 pub type Accounts<'r> = &'r State<AccountStorage>;
-pub struct AccountStorage (AccountMap);
+pub struct AccountStorage(AccountMap);
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(crate = "rocket::serde")]
@@ -44,7 +44,7 @@ impl Account {
         Self {
             id: Uuid::new_v4(),
             username,
-            password
+            password,
         }
     }
 
@@ -54,8 +54,8 @@ impl Account {
 }
 
 impl AccountStorage {
-    pub fn new() -> Self{
-        Self (AccountMap::new(HashMap::new()))
+    pub fn new() -> Self {
+        Self(AccountMap::new(HashMap::new()))
     }
 
     #[allow(dead_code)]

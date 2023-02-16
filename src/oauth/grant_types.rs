@@ -1,4 +1,3 @@
-
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub enum GrantType {
     ClientCredentials,
@@ -10,4 +9,3 @@ pub fn from_string(s: &str) -> Option<GrantType> {
         _ => None,
     }
 }
-

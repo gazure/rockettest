@@ -1,6 +1,5 @@
-use std::str::FromStr;
 use std::fmt::Display;
-
+use std::str::FromStr;
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub enum Scope {
