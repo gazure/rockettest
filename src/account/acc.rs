@@ -4,23 +4,22 @@ use std::collections::HashMap;
 use rocket::State;
 use rocket::serde::uuid::Uuid;
 use rocket::http::Status;
-use bcrypt;
 
 /// TODO: Move this
 #[allow(dead_code)]
 #[derive(Debug)]
 pub enum Error{
-    InvalidUsername,
-    InvalidPassword,
-    InvalidAccount,
+    Username,
+    Password,
+    Account,
 }
 
-impl Into<Status> for Error {
-    fn into(self) -> Status {
-        match self {
-            Error::InvalidUsername => Status::BadRequest,
-            Error::InvalidPassword => Status::BadRequest,
-            Error::InvalidAccount => Status::BadRequest,
+impl From<Error> for Status {
+    fn from(e: Error) -> Self {
+        match e {
+            Error::Username => Status::BadRequest,
+            Error::Password => Status::BadRequest,
+            Error::Account => Status::BadRequest,
         }
     }
 }
@@ -62,7 +61,7 @@ impl AccountStorage {
     #[allow(dead_code)]
     pub async fn get(&self, id: &Uuid) -> Option<Account> {
         let accounts = self.0.lock().await;
-        Some(accounts.get(&id)?.clone())
+        Some(accounts.get(id)?.clone())
     }
 
     pub async fn login(&self, username: &str, password: &str) -> Option<Account> {
@@ -77,7 +76,7 @@ impl AccountStorage {
     pub async fn register(&self, username: &str, password: &str) -> Result<Account, Error> {
         let mut accounts = self.0.lock().await;
         let account = Account::new(username.to_string(), password.to_string());
-        accounts.insert(account.id.clone(), account.clone());
+        accounts.insert(account.id, account.clone());
         Ok(account)
     }
 }

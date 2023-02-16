@@ -20,22 +20,28 @@ impl ClientStorage {
 
 	pub async fn get(&self, client_id: &Uuid) -> Option<Client> {
 		let clients = self.0.lock().await;
-		Some(clients.get(&client_id)?.clone())
+		Some(clients.get(client_id)?.clone())
 	}
 
 	pub async fn update(&self, client: Client) {
 		let mut clients = self.0.lock().await;
-		clients.entry(client.id.clone()).and_modify(|c| *c = client);
+		clients.entry(client.id).and_modify(|c| *c = client);
 	}
 
+    #[allow(dead_code)] // used in unit tests
+    pub async fn create(&self, client: Client) {
+        let mut clients = self.0.lock().await;
+        clients.insert(client.id, client);
+    }
+
 	pub async fn register(&self, name: String, description: String) -> Result<Client, Error> {
-		if name == String::from("Grant Azure") {
+		if name == *"Grant Azure" {
 			return Err(Error::InvalidClientName);
 		}
 
 		let mut clients = self.0.lock().await;
 		let client = Client::new(name, description);
-		clients.insert(client.id.clone(), client.clone());
+		clients.insert(client.id, client.clone());
 		Ok(client)
 	}
 
@@ -60,8 +66,8 @@ impl Client {
 		Self {
 			id: Uuid::new_v4(),
 			secret: Self::generate_secret(),
-			name: name,
-			description: description,
+			name,
+			description,
 			recent_login_count: 0,
 		}
 	}

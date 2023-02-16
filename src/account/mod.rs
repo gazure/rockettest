@@ -5,10 +5,8 @@ use rocket::http::{Cookie, CookieJar};
 use rocket::response::Redirect;
 use rocket::serde::uuid::Uuid;
 
-mod account;
+mod acc;
 mod forms;
-
-use account::Error;
 
 #[derive(Debug)]
 struct LoggedIn {
@@ -17,14 +15,14 @@ struct LoggedIn {
 
 #[rocket::async_trait]
 impl<'r> FromRequest<'r> for LoggedIn {
-    type Error = account::Error;
+    type Error = acc::Error;
 
     async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error> {
         let jar = request.cookies();
         let user_id_cookie = jar.get("user_id");
         match user_id_cookie {
             Some(user_id) => Outcome::Success(Self{user_id: Uuid::parse_str(user_id.value()).unwrap()}),
-            None => Outcome::Failure((Status::Unauthorized, account::Error::InvalidAccount))
+            None => Outcome::Failure((Status::Unauthorized, acc::Error::Account))
         }
     }
 }
@@ -38,7 +36,7 @@ async fn login_form() -> Value {
 }
 
 #[post("/login", data = "<login_form>")]
-async fn login(login_form: forms::LoginForm<'_>, accounts: account::Accounts<'_>, jar: &CookieJar<'_>) -> Redirect {
+async fn login(login_form: forms::LoginForm<'_>, accounts: acc::Accounts<'_>, jar: &CookieJar<'_>) -> Redirect {
     let user = accounts.login(login_form.username, login_form.password).await;
 
     match user {
@@ -52,19 +50,18 @@ async fn login(login_form: forms::LoginForm<'_>, accounts: account::Accounts<'_>
 }
 
 #[post("/register", data = "<login_form>")]
-async fn register(login_form: forms::LoginForm<'_>, accounts: account::Accounts<'_>, jar: &CookieJar<'_>) -> Result<Redirect, Status> {
-    let account = accounts.register(login_form.username, login_form.password).await.map_err(|e: Error | e.into())?;
+async fn register(login_form: forms::LoginForm<'_>, accounts: acc::Accounts<'_>, jar: &CookieJar<'_>) -> Result<Redirect, Status> {
+    let account = accounts.register(login_form.username, login_form.password).await.map_err(|e| -> Status {e.into()})?;
     jar.add(Cookie::build("user_id", account.id.to_string()).finish());
     Ok(Redirect::to("/account/settings"))
 }
 
 
 #[get("/settings")]
-async fn settings(context: LoggedIn, accounts: account::Accounts<'_>) -> Result<Value, Status> {
+async fn settings(context: LoggedIn, accounts: acc::Accounts<'_>) -> Result<Value, Status> {
     let account = accounts.get(&context.user_id)
         .await
         .ok_or(Status::Unauthorized)?;
-    println!("{:?}", account);
     Ok(json!({"username": account.username}))
 }
 
@@ -76,7 +73,7 @@ async fn logout(cookies: &CookieJar<'_>) -> Redirect {
 }
 
 pub async fn stage() -> rocket::fairing::AdHoc {
-    let account_storage = account::AccountStorage::new();
+    let account_storage = acc::AccountStorage::new();
 	rocket::fairing::AdHoc::on_ignite("account", |rocket| async {
 		rocket.mount("/account", routes![login_form, login, logout, register, settings])
             .manage(account_storage)

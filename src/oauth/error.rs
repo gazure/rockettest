@@ -12,28 +12,29 @@ pub enum Error {
     InvalidAuthHeader,
     InvalidAuthType,
     InvalidResourceAccess,
-    JwtError(jwt::Error),
+    Jwt(jwt::Error),
 }
 
 impl From<jwt::Error> for Error {
     fn from(e: jwt::Error) -> Self {
-        Error::JwtError(e)
+        Error::Jwt(e)
     }
 }
 
-impl Into<Status> for Error {
-    fn into(self) -> Status {
-        match self {
+impl From<Error> for Status {
+    fn from(e: Error) -> Self {
+        match e {
             Error::InvalidGrantType => Status::BadRequest,
-            Error::RateLimited => Status::Forbidden,
+            Error::RateLimited => Status::TooManyRequests,
             Error::InvalidSecret => Status::Unauthorized,
             Error::InvalidClient => Status::Unauthorized,
-            Error::InvalidToken => Status::InternalServerError,  // can't remember why I did this
+            Error::InvalidToken => Status::Unauthorized,
             Error::InvalidClientName => Status::BadRequest,
-            Error::InvalidAuthHeader => Status::Unauthorized,
-            Error::InvalidAuthType => Status::Unauthorized,
+            Error::InvalidAuthHeader => Status::BadRequest,
+            Error::InvalidAuthType => Status::BadRequest,
             Error::InvalidResourceAccess => Status::Forbidden,
-            Error::JwtError(_) => Status::Unauthorized,
+            Error::Jwt(_) => Status::Unauthorized,
         }
     }
 }
+
