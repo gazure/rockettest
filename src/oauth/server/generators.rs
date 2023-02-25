@@ -51,11 +51,10 @@ pub async fn generate(
 #[cfg(test)]
 mod test {
     use super::*;
-    use rocket::tokio;
 
-    #[tokio::test]
+    #[rocket::async_test]
     async fn test_generate_client_credentials() {
-        let client = Client::new("name".to_string(), "test".to_string());
+        let client = Client::new_no_secret("name".to_string(), "test".to_string());
         let scopes = vec![Scope::OpenId, Scope::Profile];
         let token = generate(GrantType::ClientCredentials, scopes, client)
             .await

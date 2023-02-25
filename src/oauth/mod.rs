@@ -32,8 +32,8 @@ async fn token_endpoint(
 async fn register(
     client_request: Json<RegisterRequest<'_>>,
     clients: Clients<'_>,
-) -> Result<Json<Client>, BadRequest<Value>> {
-    let client = clients
+) -> Result<Value, BadRequest<Value>> {
+    let (client, secret) = clients
         .register(
             client_request.name.to_string(),
             client_request.description.to_string(),
@@ -43,7 +43,12 @@ async fn register(
             Error::InvalidClientName => BadRequest(Some(json!("name already taken?"))),
             _ => BadRequest(Some(json!("unknown error"))),
         })?;
-    Ok(Json(client))
+
+    let mut client_value = serde_json::to_value(client).map_err(|_| BadRequest(Some(json!(
+        "failed to serialize client"
+    ))))?;
+    client_value["secret"] = Value::String(secret);
+    Ok(client_value)
 }
 
 #[get("/clients/<id>")]
@@ -86,6 +91,7 @@ pub async fn stage() -> rocket::fairing::AdHoc {
 
 #[cfg(test)]
 mod test {
+    use rocket::serde::json::Value;
     use rocket::http::{ContentType, Header, Status};
     use rocket::local::asynchronous::Client;
     use rocket::serde::json::json;
@@ -121,8 +127,12 @@ mod test {
             .await;
 
         assert_eq!(response.status(), Status::Ok);
+        let body: Value = response.into_json().await.unwrap();
+        let secret = body["secret"].clone();
+        let secret = secret.as_str().unwrap();
+        let client: crate::oauth::client::Client = serde_json::from_value(body).unwrap();
+        println!("client: {:?}", client);
 
-        let client = response.into_json::<super::client::Client>().await.unwrap();
         assert_eq!(client.name, "test");
         assert_eq!(client.description, "test");
 
@@ -131,7 +141,7 @@ mod test {
             .header(ContentType::Form)
             .body(format!(
                 "grant_type=client_credentials&scope=openid&client_id={}&client_secret={}",
-                client.id, client.secret
+                client.id, secret
             ))
             .dispatch()
             .await;

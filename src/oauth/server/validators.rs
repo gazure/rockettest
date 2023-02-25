@@ -56,17 +56,16 @@ mod test {
     async fn test_validate_client() {
         let client_storage = ClientStorage::new();
         let clients: Clients = State::from(&client_storage);
-        let client = Client::new("name".to_string(), "test".to_string());
+        let (client, client_secret) = Client::new("name".to_string(), "test".to_string());
         client_storage.create(client.clone()).await;
 
         let client_id = client.id;
-        let client_secret = client.secret;
         let result = validate_client(clients, &client_id, &client_secret)
             .await
             .unwrap();
 
         assert_eq!(result.id, client_id);
-        assert_eq!(result.secret, client_secret);
+        assert_eq!(result.validate_secret(&client_secret).unwrap(), ());
         assert_eq!(result.name, "name");
         assert_eq!(result.description, "test");
     }
