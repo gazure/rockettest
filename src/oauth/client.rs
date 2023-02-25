@@ -98,6 +98,21 @@ impl Client {
     }
 }
 
+impl Default for Client {
+    fn default() -> Self {
+        Self::new(
+            "make this word random?".to_string(),
+            "default desc".to_string(),
+        )
+    }
+}
+
+impl PartialEq for Client {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+    }
+}
+
 pub async fn init_state() -> ClientStorage {
     let client_storage = ClientStorage::new();
     let mut client = Client::new(String::from("Grant"), String::from("Grant Azure"));
@@ -106,4 +121,104 @@ pub async fn init_state() -> ClientStorage {
         String::from("5a02dd7d0e66aa5c9224bd0dc09d25ef2fa880a8d66f13a0312113938a2f4701");
     client_storage.update(client).await;
     client_storage
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_client_secret() {
+        let client = Client::new(String::from("Grant"), String::from("Grant's client"));
+        assert!(client.match_secret(&client.secret));
+        assert!(!client.match_secret(&String::from("")));
+    }
+
+    #[test]
+    fn test_client_rate_limit() {
+        let mut client = Client::new(String::from("Grant"), String::from("Grant's client"));
+        assert!(client.assert_rate_limit());
+        client.recent_login_count = 5;
+        assert!(!client.assert_rate_limit());
+    }
+
+    #[test]
+    fn test_client_validate_secret() {
+        let mut client = Client::new(String::from("Grant"), String::from("Grant's client"));
+        assert!(client.validate_secret(&client.secret).is_ok());
+        client.recent_login_count = 5;
+        assert!(client.validate_secret(&client.secret).is_err());
+        assert!(client.validate_secret(&String::from("")).is_err());
+    }
+
+    #[test]
+    fn test_client_increment_login_count() {
+        let mut client = Client::new(String::from("Grant"), String::from("Grant's client"));
+        assert_eq!(client.recent_login_count, 0);
+        client.increment_login_count();
+        assert_eq!(client.recent_login_count, 1);
+    }
+
+    #[test]
+    fn test_client_generate_secret() {
+        let secret = Client::generate_secret();
+        assert_eq!(secret.len(), 64);
+    }
+
+    #[test]
+    fn test_client_new() {
+        let client = Client::new(String::from("Grant"), String::from("Grant's client"));
+        assert_eq!(client.name, "Grant");
+        assert_eq!(client.description, "Grant's client");
+        assert_eq!(client.secret.len(), 64);
+    }
+
+    #[rocket::async_test]
+    async fn test_client_storage_new() {
+        let client_storage = ClientStorage::new();
+        assert_eq!(client_storage.0.lock().await.len(), 0);
+    }
+
+    #[rocket::async_test]
+    async fn test_client_storage_create() {
+        let client_storage = ClientStorage::new();
+        let client = Client::new(String::from("Grant"), String::from("Grant's client"));
+        client_storage.create(client.clone()).await;
+        assert_eq!(client_storage.0.lock().await.len(), 1);
+        assert_eq!(
+            client_storage.0.lock().await.get(&client.id).unwrap(),
+            &client
+        );
+    }
+
+    #[rocket::async_test]
+    async fn test_client_storage_update() {
+        let client_storage = ClientStorage::new();
+        let mut client = Client::new(String::from("Grant"), String::from("Grant's client"));
+        client_storage.create(client.clone()).await;
+        client.name = String::from("Grant Azure");
+        client_storage.update(client.clone()).await;
+        assert_eq!(client_storage.0.lock().await.len(), 1);
+        assert_eq!(
+            client_storage.0.lock().await.get(&client.id).unwrap(),
+            &client
+        );
+    }
+
+    #[rocket::async_test]
+    async fn test_client_storage_delete() {
+        let client_storage = ClientStorage::new();
+        let client = Client::new(String::from("Grant"), String::from("Grant's client"));
+        client_storage.create(client.clone()).await;
+        client_storage.delete(client.id).await;
+        assert_eq!(client_storage.0.lock().await.len(), 0);
+    }
+
+    #[rocket::async_test]
+    async fn test_client_storage_get() {
+        let client_storage = ClientStorage::new();
+        let client = Client::new(String::from("Grant"), String::from("Grant's client"));
+        client_storage.create(client.clone()).await;
+        assert_eq!(client_storage.get(&client.id).await, Some(client));
+    }
 }
