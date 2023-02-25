@@ -44,9 +44,8 @@ async fn register(
             _ => BadRequest(Some(json!("unknown error"))),
         })?;
 
-    let mut client_value = serde_json::to_value(client).map_err(|_| BadRequest(Some(json!(
-        "failed to serialize client"
-    ))))?;
+    let mut client_value = serde_json::to_value(client)
+        .map_err(|_| BadRequest(Some(json!("failed to serialize client"))))?;
     client_value["secret"] = Value::String(secret);
     Ok(client_value)
 }
@@ -91,10 +90,10 @@ pub async fn stage() -> rocket::fairing::AdHoc {
 
 #[cfg(test)]
 mod test {
-    use rocket::serde::json::Value;
     use rocket::http::{ContentType, Header, Status};
     use rocket::local::asynchronous::Client;
     use rocket::serde::json::json;
+    use rocket::serde::json::Value;
 
     #[rocket::async_test]
     async fn test_get_client_unauthorized() {

@@ -33,7 +33,11 @@ impl ClientStorage {
         clients.insert(client.id, client);
     }
 
-    pub async fn register(&self, name: String, description: String) -> Result<(Client, String), Error> {
+    pub async fn register(
+        &self,
+        name: String,
+        description: String,
+    ) -> Result<(Client, String), Error> {
         if name == *"Grant Azure" {
             return Err(Error::InvalidClientName);
         }
@@ -134,7 +138,9 @@ pub async fn init_state() -> ClientStorage {
     let client_storage = ClientStorage::new();
     let mut client = Client::new_no_secret(String::from("Grant"), String::from("Grant Azure"));
     client.id = Uuid::parse_str("f452faa7-cbe0-437b-97ff-c53049b0f710").unwrap();
-    client.reroll_secret(Some(String::from("5a02dd7d0e66aa5c9224bd0dc09d25ef2fa880a8d66f13a0312113938a2f4701")));
+    client.reroll_secret(Some(String::from(
+        "5a02dd7d0e66aa5c9224bd0dc09d25ef2fa880a8d66f13a0312113938a2f4701",
+    )));
     client_storage.update(client).await;
     client_storage
 }
@@ -152,7 +158,8 @@ mod test {
 
     #[test]
     fn test_client_rate_limit() {
-        let mut client = Client::new_no_secret(String::from("Grant"), String::from("Grant's client"));
+        let mut client =
+            Client::new_no_secret(String::from("Grant"), String::from("Grant's client"));
         assert!(client.assert_rate_limit());
         client.recent_login_count = 5;
         assert!(!client.assert_rate_limit());
@@ -160,7 +167,8 @@ mod test {
 
     #[test]
     fn test_client_validate_secret() {
-        let (mut client, secret) = Client::new(String::from("Grant"), String::from("Grant's client"));
+        let (mut client, secret) =
+            Client::new(String::from("Grant"), String::from("Grant's client"));
         assert!(client.validate_secret(&secret).is_ok());
         client.recent_login_count = 5;
         assert!(client.validate_secret(&secret).is_err());
@@ -170,7 +178,8 @@ mod test {
 
     #[test]
     fn test_client_increment_login_count() {
-        let mut client = Client::new_no_secret(String::from("Grant"), String::from("Grant's client"));
+        let mut client =
+            Client::new_no_secret(String::from("Grant"), String::from("Grant's client"));
         assert_eq!(client.recent_login_count, 0);
         client.increment_login_count();
         assert_eq!(client.recent_login_count, 1);
@@ -214,7 +223,8 @@ mod test {
     #[rocket::async_test]
     async fn test_client_storage_update() {
         let client_storage = ClientStorage::new();
-        let mut client = Client::new_no_secret(String::from("Grant"), String::from("Grant's client"));
+        let mut client =
+            Client::new_no_secret(String::from("Grant"), String::from("Grant's client"));
         client_storage.create(client.clone()).await;
         client.name = String::from("Grant Azure");
         client_storage.update(client.clone()).await;
