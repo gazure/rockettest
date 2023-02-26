@@ -19,8 +19,14 @@ pub struct AuthContext {
     pub client_name: String,
 }
 
-pub async fn  authorize(auth_request: forms::AuthorizationRequest<'_>, clients: Clients<'_>) -> Result<AuthContext, Error> {
-    let client = clients.get(&auth_request.client_id).await.ok_or(Error::InvalidClient)?;
+pub async fn authorize(
+    auth_request: forms::AuthorizationRequest<'_>,
+    clients: Clients<'_>,
+) -> Result<AuthContext, Error> {
+    let client = clients
+        .get(&auth_request.client_id)
+        .await
+        .ok_or(Error::InvalidClient)?;
     let auth_context = AuthContext {
         client_name: client.name,
     };
