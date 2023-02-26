@@ -123,10 +123,17 @@ mod test {
     use rocket::local::asynchronous::Client;
     use rocket::serde::json::json;
     use rocket::serde::json::Value;
+    use rocket_dyn_templates::Template;
+
+    async fn test_rocket() -> rocket::Rocket<rocket::Build> {
+        rocket::build()
+            .attach(Template::fairing())
+            .attach(super::stage().await)
+    }
 
     #[rocket::async_test]
     async fn test_get_client_unauthorized() {
-        let rocket = rocket::build().attach(super::stage().await);
+        let rocket = test_rocket().await;
         let client = Client::tracked(rocket).await.unwrap();
 
         let response = client
@@ -138,7 +145,7 @@ mod test {
 
     #[rocket::async_test]
     async fn test_manage_client_with_client_credentials() {
-        let rocket = rocket::build().attach(super::stage().await);
+        let rocket = test_rocket().await;
         let test_client = Client::tracked(rocket).await.unwrap();
 
         let response = test_client

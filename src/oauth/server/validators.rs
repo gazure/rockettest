@@ -14,7 +14,7 @@ pub fn validate_grant_type(grant_type: &str) -> Result<grant_types::GrantType, E
 pub async fn validate_client(
     clients: Clients<'_>,
     client_id: &Uuid,
-    client_secret: &String,
+    client_secret: &str,
 ) -> Result<Client, Error> {
     let mut client = clients
         .get(client_id)

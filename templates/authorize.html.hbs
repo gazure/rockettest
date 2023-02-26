@@ -1,0 +1,14 @@
+<html>
+    <head>
+        <title>Authorize</title>
+    </head>
+    <body>
+        <h1>Authorize</h1>
+        <div>
+            {{client_name}} is requesting access to your account.
+        </div>
+        <form action="/oauth/authorize" method="POST">
+            <input type="submit" value="Authorize">
+        </form>
+    </body>
+</html>

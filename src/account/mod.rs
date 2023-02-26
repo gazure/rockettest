@@ -10,7 +10,7 @@ mod acc;
 mod forms;
 
 #[derive(Debug)]
-pub struct LoggedIn {
+struct LoggedIn {
     pub user_id: Uuid,
 }
 

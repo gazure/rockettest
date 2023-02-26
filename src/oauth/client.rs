@@ -72,7 +72,7 @@ impl Client {
 
         let client = Self {
             id: Uuid::new_v4(),
-            secret: bcrypt::hash(secret.clone().as_bytes(), bcrypt::DEFAULT_COST).unwrap(),
+            secret: bcrypt::hash(secret.as_bytes(), bcrypt::DEFAULT_COST).unwrap(),
             name,
             description,
             recent_login_count: 0,
@@ -96,7 +96,7 @@ impl Client {
         self.recent_login_count < 5
     }
 
-    pub fn validate_secret(&self, secret: &String) -> Result<(), Error> {
+    pub fn validate_secret(&self, secret: &str) -> Result<(), Error> {
         match (self.assert_rate_limit(), self.match_secret(secret)) {
             (true, true) => Ok(()),
             (false, true) => Err(Error::RateLimited),
@@ -123,7 +123,7 @@ impl Client {
             None => Self::generate_secret(),
         };
 
-        self.secret = bcrypt::hash(new_secret.clone().as_bytes(), bcrypt::DEFAULT_COST).unwrap();
+        self.secret = bcrypt::hash(new_secret.as_bytes(), bcrypt::DEFAULT_COST).unwrap();
         new_secret
     }
 }
