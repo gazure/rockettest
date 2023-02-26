@@ -1487,6 +1487,7 @@ dependencies = [
  "hex",
  "hmac",
  "jwt",
+ "lazy_static",
  "rand",
  "rocket",
  "rocket_dyn_templates",

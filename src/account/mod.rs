@@ -10,7 +10,7 @@ mod acc;
 mod forms;
 
 #[derive(Debug)]
-struct LoggedIn {
+pub struct LoggedIn {
     pub user_id: Uuid,
 }
 
@@ -85,10 +85,12 @@ async fn register(
 }
 
 #[get("/settings")]
-async fn settings(context: LoggedIn, jar: &CookieJar<'_>, accounts: acc::Accounts<'_>) -> Result<Template, Redirect> {
-    let account = accounts
-        .get(&context.user_id)
-        .await;
+async fn settings(
+    context: LoggedIn,
+    jar: &CookieJar<'_>,
+    accounts: acc::Accounts<'_>,
+) -> Result<Template, Redirect> {
+    let account = accounts.get(&context.user_id).await;
 
     match account {
         Some(account) => Ok(Template::render(
@@ -100,7 +102,7 @@ async fn settings(context: LoggedIn, jar: &CookieJar<'_>, accounts: acc::Account
         None => {
             jar.remove(Cookie::named("user_id"));
             Err(Redirect::to("/account/login"))
-        },
+        }
     }
 }
 

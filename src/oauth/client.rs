@@ -1,3 +1,5 @@
+use crate::config::PASSWORD_COST;
+use crate::oauth::error::Error;
 use hex::ToHex;
 use rand::Rng;
 use rocket::serde::uuid::Uuid;
@@ -5,8 +7,6 @@ use rocket::serde::{Deserialize, Serialize};
 use rocket::tokio::sync::Mutex;
 use rocket::State;
 use std::collections::HashMap;
-
-use crate::oauth::error::Error;
 
 type ClientsMap = Mutex<HashMap<Uuid, Client>>;
 pub type Clients<'r> = &'r State<ClientStorage>;
@@ -72,7 +72,7 @@ impl Client {
 
         let client = Self {
             id: Uuid::new_v4(),
-            secret: bcrypt::hash(secret.as_bytes(), bcrypt::DEFAULT_COST).unwrap(),
+            secret: bcrypt::hash(secret.as_bytes(), *PASSWORD_COST).unwrap(),
             name,
             description,
             recent_login_count: 0,
@@ -109,8 +109,7 @@ impl Client {
     }
 
     fn generate_secret() -> String {
-        let secret = rand::thread_rng().gen::<[u8; 32]>();
-        secret.encode_hex::<String>()
+        rand::thread_rng().gen::<[u8; 32]>().encode_hex::<String>()
     }
 
     pub fn increment_login_count(&mut self) {
@@ -123,7 +122,7 @@ impl Client {
             None => Self::generate_secret(),
         };
 
-        self.secret = bcrypt::hash(new_secret.as_bytes(), bcrypt::DEFAULT_COST).unwrap();
+        self.secret = bcrypt::hash(new_secret.as_bytes(), *PASSWORD_COST).unwrap();
         new_secret
     }
 }

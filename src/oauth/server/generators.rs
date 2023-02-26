@@ -45,6 +45,9 @@ pub async fn generate(
 
             Ok(Token::new(token_str, TOKEN_TTL, scopes_string, None))
         }
+        GrantType::AuthorizationCode => {
+            Ok(Token::new("hello".to_string(), 0, "".to_string(), None))
+        }
     }
 }
 

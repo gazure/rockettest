@@ -1,3 +1,4 @@
+use crate::config::PASSWORD_COST;
 use rocket::http::Status;
 use rocket::serde::uuid::Uuid;
 use rocket::serde::{Deserialize, Serialize};
@@ -40,7 +41,7 @@ pub struct Account {
 
 impl Account {
     pub fn new(username: String, password: String) -> Self {
-        let password = bcrypt::hash(password.as_bytes(), bcrypt::DEFAULT_COST).unwrap();
+        let password = bcrypt::hash(password.as_bytes(), *PASSWORD_COST).unwrap();
         Self {
             id: Uuid::new_v4(),
             username,

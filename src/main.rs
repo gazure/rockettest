@@ -7,6 +7,7 @@ use rocket::serde::json::{json, Value};
 use rocket_dyn_templates::Template;
 
 mod account;
+mod config;
 mod oauth;
 
 #[get("/")]

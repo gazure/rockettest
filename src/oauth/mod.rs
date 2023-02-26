@@ -12,6 +12,7 @@ pub mod client_jwt;
 pub mod error;
 pub mod forms;
 pub mod grant_types;
+pub mod pkce;
 pub mod scopes;
 pub mod server;
 pub mod token;
@@ -33,7 +34,7 @@ async fn token_endpoint(
 
 #[get("/authorize?<auth_request..>")]
 async fn authorize(
-    auth_request: forms::AuthorizationRequest<'_>,
+    auth_request: forms::AuthorizationRequestForm<'_>,
     clients: Clients<'_>,
     jar: &CookieJar<'_>,
 ) -> Result<Template, Redirect> {
@@ -49,6 +50,26 @@ async fn authorize(
         "authorize",
         context! {client_name: auth_context.client_name},
     ))
+}
+
+#[post("/authorize", data = "<auth_request>")]
+async fn submit_authorize_form(
+    context: crate::account::LoggedIn,
+    auth_request: forms::AuthorizationRequest<'_>,
+    clients: Clients<'_>,
+    pkce_codes: pkce::PkceCodes<'_>,
+) -> Redirect {
+    let validated_auth_context =
+        server::submit_authorization(context.user_id, auth_request, clients, pkce_codes)
+            .await
+            .unwrap();
+    let redirect_uri = format!(
+        "{}?state={}&code={}",
+        validated_auth_context.redirect_uri,
+        validated_auth_context.state,
+        validated_auth_context.code
+    );
+    Redirect::to(redirect_uri)
 }
 
 #[post("/clients", data = "<client_request>")]
@@ -101,6 +122,7 @@ async fn delete_client(
 
 pub async fn stage() -> rocket::fairing::AdHoc {
     let client_storage = client::init_state().await;
+    let pkce_storage = pkce::PkceStorage::new();
     rocket::fairing::AdHoc::on_ignite("oauth", |rocket| async {
         rocket
             .mount(
@@ -110,10 +132,12 @@ pub async fn stage() -> rocket::fairing::AdHoc {
                     register,
                     get_client,
                     delete_client,
-                    authorize
+                    authorize,
+                    submit_authorize_form
                 ],
             )
             .manage(client_storage)
+            .manage(pkce_storage)
     })
 }
 

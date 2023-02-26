@@ -4,6 +4,7 @@ use std::borrow::Cow;
 use uuid::Uuid;
 
 pub type TokenRequestForm<'r> = Form<TokenRequest<'r>>;
+pub type AuthorizationRequest<'r> = Form<AuthorizationRequestForm<'r>>;
 
 #[allow(dead_code)]
 #[derive(Debug, FromForm)]
@@ -23,7 +24,7 @@ pub struct RegisterRequest<'r> {
 }
 
 #[derive(Debug, FromForm)]
-pub struct AuthorizationRequest<'r> {
+pub struct AuthorizationRequestForm<'r> {
     pub client_id: Uuid,
     pub response_type: &'r str,
     pub redirect_uri: &'r str,
