@@ -85,15 +85,23 @@ async fn register(
 }
 
 #[get("/settings")]
-async fn settings(context: LoggedIn, accounts: acc::Accounts<'_>) -> Result<Template, Status> {
+async fn settings(context: LoggedIn, jar: &CookieJar<'_>, accounts: acc::Accounts<'_>) -> Result<Template, Redirect> {
     let account = accounts
         .get(&context.user_id)
-        .await
-        .ok_or(Status::Unauthorized)?;
-    Ok(Template::render(
-        "settings",
-        context! {username: account.username},
-    ))
+        .await;
+
+    match account {
+        Some(account) => Ok(Template::render(
+            "settings",
+            context! {
+                username: account.username,
+            },
+        )),
+        None => {
+            jar.remove(Cookie::named("user_id"));
+            Err(Redirect::to("/account/login"))
+        },
+    }
 }
 
 #[post("/logout")]

@@ -31,7 +31,7 @@ async fn token_endpoint(
     Ok(json!(token))
 }
 
-#[get("/authorize?<auth_request>")]
+#[get("/authorize?<auth_request..>")]
 async fn authorize(
     auth_request: forms::AuthorizationRequest<'_>,
     clients: Clients<'_>,
