@@ -4,6 +4,7 @@ extern crate rocket;
 use rocket::http::Status;
 use rocket::response::status::Custom;
 use rocket::serde::json::{json, Value};
+use rocket_dyn_templates::Template;
 
 mod account;
 mod oauth;
@@ -78,6 +79,7 @@ fn internal_server_error() -> Value {
 #[launch]
 async fn rocket() -> _ {
     rocket::build()
+        .attach(Template::fairing())
         .attach(oauth::stage().await)
         .attach(account::stage().await)
         .register(

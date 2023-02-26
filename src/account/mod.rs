@@ -2,14 +2,15 @@ use rocket::http::Status;
 use rocket::http::{Cookie, CookieJar};
 use rocket::request::{FromRequest, Outcome, Request};
 use rocket::response::Redirect;
-use rocket::serde::json::{json, Value};
+use rocket::fs::NamedFile;
 use rocket::serde::uuid::Uuid;
+use rocket_dyn_templates::{Template,context};
 
 mod acc;
 mod forms;
 
 #[derive(Debug)]
-struct LoggedIn {
+pub struct LoggedIn {
     pub user_id: Uuid,
 }
 
@@ -29,11 +30,17 @@ impl<'r> FromRequest<'r> for LoggedIn {
     }
 }
 
+
 #[get("/login")]
-async fn login_form() -> Value {
-    json!({
-        "status": "please post using the form, dumbass"
-    })
+async fn login_form(    
+    jar: &CookieJar<'_>,
+) -> Result<NamedFile, Redirect> {
+    let user_cookie = jar.get("user_id");
+    if user_cookie.is_some() {
+        Err(Redirect::to("/account/settings"))
+    } else {
+        Ok(NamedFile::open("templates/login.html").await.unwrap())
+    }
 }
 
 #[post("/login", data = "<login_form>")]
@@ -56,6 +63,18 @@ async fn login(
     }
 }
 
+#[get("/register")]
+async fn register_form(    
+    jar: &CookieJar<'_>,
+) -> Result<NamedFile, Redirect> {
+    let user_cookie = jar.get("user_id");
+    if user_cookie.is_some() {
+        Err(Redirect::to("/account/settings"))
+    } else {
+        Ok(NamedFile::open("templates/register.html").await.unwrap())
+    }
+}
+
 #[post("/register", data = "<login_form>")]
 async fn register(
     login_form: forms::LoginForm<'_>,
@@ -71,12 +90,12 @@ async fn register(
 }
 
 #[get("/settings")]
-async fn settings(context: LoggedIn, accounts: acc::Accounts<'_>) -> Result<Value, Status> {
+async fn settings(context: LoggedIn, accounts: acc::Accounts<'_>) -> Result<Template, Status> {
     let account = accounts
         .get(&context.user_id)
         .await
         .ok_or(Status::Unauthorized)?;
-    Ok(json!({"username": account.username}))
+    Ok(Template::render("settings", context! {username: account.username}))
 }
 
 #[post("/logout")]
@@ -91,7 +110,7 @@ pub async fn stage() -> rocket::fairing::AdHoc {
         rocket
             .mount(
                 "/account",
-                routes![login_form, login, logout, register, settings],
+                routes![login_form, login, logout, register, register_form, settings],
             )
             .manage(account_storage)
     })

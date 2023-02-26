@@ -1,7 +1,10 @@
 use rocket::http::Status;
 use rocket::response::status::{BadRequest, NoContent};
+use rocket::http::CookieJar;
+use rocket::response::Redirect;
 use rocket::serde::json::Json;
 use rocket::serde::json::{json, Value};
+use rocket_dyn_templates::{Template, context};
 use uuid::Uuid;
 
 pub mod client;
@@ -27,6 +30,26 @@ async fn token_endpoint(
         .map_err(|e| -> Status { e.into() })?;
     Ok(json!(token))
 }
+
+
+#[get("/authorize?<auth_request>")]
+async fn authorize(
+    auth_request: forms::AuthorizationRequest<'_>,
+    clients: Clients<'_>,
+    jar: &CookieJar<'_>,
+) -> Result<Template, Redirect> {
+    let user_cookie = jar.get("user_id");
+    if user_cookie.is_none() {
+        return Err(Redirect::to("/login"));
+    }
+    let auth_context = server::authorize(auth_request, clients)
+        .await
+        .map_err(|_| Redirect::to("/account/settings"))?;
+     
+    Ok(Template::render("authorize", context!{client_name: auth_context.client_name}))
+}
+
+
 
 #[post("/clients", data = "<client_request>")]
 async fn register(
@@ -76,13 +99,14 @@ async fn delete_client(
     Ok(NoContent)
 }
 
+
 pub async fn stage() -> rocket::fairing::AdHoc {
     let client_storage = client::init_state().await;
     rocket::fairing::AdHoc::on_ignite("oauth", |rocket| async {
         rocket
             .mount(
                 "/oauth",
-                routes![token_endpoint, register, get_client, delete_client],
+                routes![token_endpoint, register, get_client, delete_client, authorize],
             )
             .manage(client_storage)
     })
@@ -108,7 +132,7 @@ mod test {
     }
 
     #[rocket::async_test]
-    async fn test_register_client() {
+    async fn test_manage_client_with_client_credentials() {
         let rocket = rocket::build().attach(super::stage().await);
         let test_client = Client::tracked(rocket).await.unwrap();
 

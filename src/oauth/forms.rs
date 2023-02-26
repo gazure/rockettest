@@ -21,3 +21,12 @@ pub struct RegisterRequest<'r> {
     pub name: Cow<'r, str>,
     pub description: Cow<'r, str>,
 }
+
+#[derive(Debug, FromForm)]
+pub struct AuthorizationRequest<'r> {
+    pub client_id: Uuid,
+    pub response_type: &'r str,
+    pub redirect_uri: &'r str,
+    pub scope: &'r str,
+    pub state: &'r str,
+}
