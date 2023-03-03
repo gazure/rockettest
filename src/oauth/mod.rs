@@ -42,13 +42,21 @@ async fn authorize(
     if user_cookie.is_none() {
         return Err(Redirect::to("/login"));
     }
+    let response_type = auth_request.response_type.clone();
     let auth_context = server::authorize(auth_request, clients)
         .await
         .map_err(|_| Redirect::to("/account/settings"))?;
 
     Ok(Template::render(
         "authorize",
-        context! {client_name: auth_context.client_name},
+        context! {
+            client_name: auth_context.client_name,
+            client_id: auth_context.client_id,
+            state: auth_context.state,
+            scope: auth_context.scope,
+            redirect_uri: auth_context.redirect_uri,
+            response_type: response_type,
+        },
     ))
 }
 
