@@ -65,7 +65,7 @@ mod test {
             .unwrap();
 
         assert_eq!(result.id, client_id);
-        assert_eq!(result.validate_secret(&client_secret).unwrap(), ());
+        assert!(result.validate_secret(&client_secret).is_ok());
         assert_eq!(result.name, "name");
         assert_eq!(result.description, "test");
     }

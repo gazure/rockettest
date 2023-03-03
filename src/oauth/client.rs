@@ -152,7 +152,7 @@ mod test {
     fn test_client_secret() {
         let (client, secret) = Client::new(String::from("Grant"), String::from("Grant's client"));
         assert!(client.match_secret(&secret));
-        assert!(!client.match_secret(&String::from("")));
+        assert!(!client.match_secret(""));
     }
 
     #[test]
@@ -172,7 +172,7 @@ mod test {
         client.recent_login_count = 5;
         assert!(client.validate_secret(&secret).is_err());
         client.recent_login_count = 0;
-        assert!(client.validate_secret(&String::from("")).is_err());
+        assert!(client.validate_secret("").is_err());
     }
 
     #[test]
@@ -198,7 +198,7 @@ mod test {
         assert_ne!(client.secret, secret);
         assert_eq!(client.recent_login_count, 0);
         assert_eq!(secret.len(), 64);
-        assert_eq!(client.match_secret(&secret), true);
+        assert!(client.match_secret(&secret));
     }
 
     #[rocket::async_test]
