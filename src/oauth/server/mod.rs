@@ -20,7 +20,7 @@ pub async fn token(
     let scopes = match grant_type {
         GrantType::AuthorizationCode => {
             let pkce = validators::validate_code(trf.code, client.id, pkce_codes).await?;
-            pkce.scope.clone()
+            pkce.scope
         }
         GrantType::ClientCredentials => {
             let scope_param = trf.scope.unwrap_or("");
