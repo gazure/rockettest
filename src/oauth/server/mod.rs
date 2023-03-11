@@ -9,17 +9,21 @@ use crate::oauth::grant_types::GrantType;
 use crate::oauth::pkce::{Pkce, PkceCodes};
 use crate::oauth::token::Token;
 
-pub async fn token(trf: forms::TokenRequestForm<'_>, clients: Clients<'_>, pkce_codes: PkceCodes<'_>) -> Result<Token, Error> {
+pub async fn token(
+    trf: forms::TokenRequestForm<'_>,
+    clients: Clients<'_>,
+    pkce_codes: PkceCodes<'_>,
+) -> Result<Token, Error> {
     let grant_type = validators::validate_grant_type(trf.grant_type)?;
     let client = validators::validate_client(clients, &trf.client_id, &trf.client_secret).await?;
-        
+
     let scopes = match grant_type {
         GrantType::AuthorizationCode => {
             let pkce = validators::validate_code(trf.code, client.id, pkce_codes).await?;
             pkce.scope.clone()
-        },
+        }
         GrantType::ClientCredentials => {
-            let scope_param = trf.scope.unwrap_or(""); 
+            let scope_param = trf.scope.unwrap_or("");
             validators::validate_scopes(scope_param)?
         }
     };
