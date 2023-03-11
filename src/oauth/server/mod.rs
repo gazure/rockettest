@@ -5,13 +5,24 @@ use uuid::Uuid;
 
 pub mod generators;
 pub mod validators;
-use crate::oauth::pkce;
+use crate::oauth::grant_types::GrantType;
+use crate::oauth::pkce::{Pkce, PkceCodes};
 use crate::oauth::token::Token;
 
-pub async fn token(trf: forms::TokenRequestForm<'_>, clients: Clients<'_>) -> Result<Token, Error> {
+pub async fn token(trf: forms::TokenRequestForm<'_>, clients: Clients<'_>, pkce_codes: PkceCodes<'_>) -> Result<Token, Error> {
     let grant_type = validators::validate_grant_type(trf.grant_type)?;
-    let scopes = validators::validate_scopes(trf.scope)?;
     let client = validators::validate_client(clients, &trf.client_id, &trf.client_secret).await?;
+        
+    let scopes = match grant_type {
+        GrantType::AuthorizationCode => {
+            let pkce = validators::validate_code(trf.code, client.id, pkce_codes).await?;
+            pkce.scope.clone()
+        },
+        GrantType::ClientCredentials => {
+            let scope_param = trf.scope.unwrap_or(""); 
+            validators::validate_scopes(scope_param)?
+        }
+    };
     let token = generators::generate(grant_type, scopes, client).await?;
     Ok(token)
 }
@@ -55,7 +66,7 @@ pub async fn submit_authorization(
     user_id: Uuid,
     auth_request: forms::AuthorizationRequest<'_>,
     clients: Clients<'_>,
-    pkce_codes: pkce::PkceCodes<'_>,
+    pkce_codes: PkceCodes<'_>,
 ) -> Result<ValidatedAuthContext, Error> {
     let client = clients
         .get(&auth_request.client_id)
@@ -64,7 +75,7 @@ pub async fn submit_authorization(
 
     let validated_scopes = validators::validate_scopes(auth_request.scope)?;
 
-    let pkce_code = pkce::Pkce::new(
+    let pkce_code = Pkce::new(
         auth_request.client_id,
         user_id,
         auth_request.redirect_uri.to_string(),

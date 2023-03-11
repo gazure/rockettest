@@ -12,8 +12,9 @@ pub struct TokenRequest<'r> {
     pub client_id: Uuid,
     pub client_secret: String,
     pub grant_type: &'r str,
-    pub scope: &'r str,
-    pub user_id: Option<&'r str>,
+    pub scope: Option<&'r str>,
+    pub code: Option<&'r str>,
+    pub redirect_uri: Option<&'r str>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

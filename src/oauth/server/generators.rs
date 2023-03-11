@@ -18,7 +18,7 @@ pub async fn generate(
     client: Client,
 ) -> Result<Token, Error> {
     match grant_type {
-        GrantType::ClientCredentials => {
+        GrantType::ClientCredentials | GrantType::AuthorizationCode => {
             // TODO: some-secret should be an RSA Key
             let key: Hmac<Sha256> = Hmac::new_from_slice(b"some-secret").unwrap();
             let mut claims = BTreeMap::new();
@@ -45,9 +45,6 @@ pub async fn generate(
 
             Ok(Token::new(token_str, TOKEN_TTL, scopes_string, None))
         }
-        GrantType::AuthorizationCode => {
-            Ok(Token::new("hello".to_string(), 0, "".to_string(), None))
-        }
     }
 }
 
@@ -60,6 +57,19 @@ mod test {
         let client = Client::new_no_secret("name".to_string(), "test".to_string());
         let scopes = vec![Scope::OpenId, Scope::Profile];
         let token = generate(GrantType::ClientCredentials, scopes, client)
+            .await
+            .unwrap();
+
+        assert_eq!(token.expires_in, TOKEN_TTL);
+        assert_eq!(token.scope, "openid profile");
+        assert!(token.refresh_token.is_none());
+    }
+
+    #[rocket::async_test]
+    async fn test_generate_authorization_code() {
+        let client = Client::new_no_secret("name".to_string(), "test".to_string());
+        let scopes = vec![Scope::OpenId, Scope::Profile];
+        let token = generate(GrantType::AuthorizationCode, scopes, client)
             .await
             .unwrap();
 

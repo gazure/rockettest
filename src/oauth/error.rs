@@ -12,6 +12,7 @@ pub enum Error {
     InvalidAuthHeader,
     InvalidAuthType,
     InvalidResourceAccess,
+    InvalidCode,
     Jwt(jwt::Error),
 }
 
@@ -33,6 +34,7 @@ impl From<Error> for Status {
             Error::InvalidAuthHeader => Status::BadRequest,
             Error::InvalidAuthType => Status::BadRequest,
             Error::InvalidResourceAccess => Status::Forbidden,
+            Error::InvalidCode => Status::Forbidden,
             Error::Jwt(_) => Status::Unauthorized,
         }
     }

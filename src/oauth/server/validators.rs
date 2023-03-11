@@ -1,6 +1,7 @@
 use crate::oauth::client::{Client, Clients};
 use crate::oauth::error::Error;
 use crate::oauth::grant_types;
+use crate::oauth::pkce::{PkceCodes, Pkce};
 use crate::oauth::scopes::Scope;
 use uuid::Uuid;
 
@@ -9,6 +10,18 @@ pub fn validate_grant_type(grant_type: &str) -> Result<grant_types::GrantType, E
         Some(gt) => Ok(gt),
         None => Err(Error::InvalidGrantType),
     }
+}
+
+pub async fn validate_code(code: Option<&str>, client_id: Uuid, pkce_codes: PkceCodes<'_>) -> Result<Pkce, Error> {
+    let code = code.ok_or(Error::InvalidCode)?;
+    let pkce_code = pkce_codes.get(code).await.ok_or(Error::InvalidCode)?;
+    if pkce_code.client_id != client_id {
+        return Err(Error::InvalidCode);
+    }
+    // this needs a lot more stuff
+    // validate state, code challenge, etc.
+    pkce_codes.delete(code).await;
+    Ok(pkce_code)
 }
 
 pub async fn validate_client(

@@ -25,8 +25,9 @@ use forms::{RegisterRequest, TokenRequestForm};
 async fn token_endpoint(
     token_request: TokenRequestForm<'_>,
     clients: Clients<'_>,
+        pkce_codes: pkce::PkceCodes<'_>
 ) -> Result<Value, Status> {
-    let token = server::token(token_request, clients)
+    let token = server::token(token_request, clients, pkce_codes)
         .await
         .map_err(|e| -> Status { e.into() })?;
     Ok(json!(token))
@@ -42,7 +43,7 @@ async fn authorize(
     if user_cookie.is_none() {
         return Err(Redirect::to("/login"));
     }
-    let response_type = auth_request.response_type.clone();
+    let response_type = auth_request.response_type.to_string();
     let auth_context = server::authorize(auth_request, clients)
         .await
         .map_err(|_| Redirect::to("/account/settings"))?;
