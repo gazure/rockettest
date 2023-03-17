@@ -35,7 +35,7 @@ async fn token_endpoint(
 
 #[get("/authorize?<auth_request..>")]
 async fn authorize(
-    auth_request: forms::AuthorizationRequestForm<'_>,
+    auth_request: forms::AuthorizationRequest<'_>,
     clients: Clients<'_>,
     jar: &CookieJar<'_>,
 ) -> Result<Template, Redirect> {
@@ -57,6 +57,8 @@ async fn authorize(
             scope: auth_context.scope,
             redirect_uri: auth_context.redirect_uri,
             response_type: response_type,
+            code_challenge: auth_context.code_challenge,
+            code_challenge_method: auth_context.code_challenge_method.to_string()
         },
     ))
 }
@@ -64,7 +66,7 @@ async fn authorize(
 #[post("/authorize", data = "<auth_request>")]
 async fn submit_authorize_form(
     context: crate::account::LoggedIn,
-    auth_request: forms::AuthorizationRequest<'_>,
+    auth_request: forms::AuthorizationRequestForm<'_>,
     clients: Clients<'_>,
     pkce_codes: pkce::PkceCodes<'_>,
 ) -> Redirect {

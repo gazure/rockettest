@@ -1,16 +1,8 @@
 use crate::oauth::client::{Client, Clients};
 use crate::oauth::error::Error;
-use crate::oauth::grant_types;
 use crate::oauth::pkce::{Pkce, PkceCodes};
 use crate::oauth::scopes::Scope;
 use uuid::Uuid;
-
-pub fn validate_grant_type(grant_type: &str) -> Result<grant_types::GrantType, Error> {
-    match grant_types::from_string(grant_type) {
-        Some(gt) => Ok(gt),
-        None => Err(Error::InvalidGrantType),
-    }
-}
 
 pub async fn validate_code(
     code: Option<&str>,
@@ -61,13 +53,6 @@ mod test {
     use crate::oauth::client::ClientStorage;
     use rocket::tokio;
     use rocket::State;
-
-    #[tokio::test]
-    async fn test_validate_grant_type() {
-        let grant_type = "client_credentials";
-        let grant_type_parsed = validate_grant_type(grant_type).unwrap();
-        assert_eq!(grant_type_parsed, grant_types::GrantType::ClientCredentials);
-    }
 
     #[tokio::test]
     async fn test_validate_client() {

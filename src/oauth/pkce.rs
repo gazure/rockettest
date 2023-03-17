@@ -1,10 +1,29 @@
 use crate::oauth::scopes::Scope;
 use hex::ToHex;
 use rand::Rng;
+use rocket::form::FromFormField;
 use rocket::tokio::sync::Mutex;
 use rocket::State;
 use std::collections::HashMap;
+use std::fmt;
 use uuid::Uuid;
+
+#[derive(Debug, Clone, FromFormField)]
+pub enum CodeChallengeMethod {
+    S256,
+}
+
+impl fmt::Display for CodeChallengeMethod {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                CodeChallengeMethod::S256 => "S256",
+            }
+        )
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct Pkce {
@@ -13,9 +32,8 @@ pub struct Pkce {
     pub redirect_uri: String,
     pub state: String,
     pub scope: Vec<Scope>,
-    pub code_verifier: String,
     pub code_challenge: String,
-    pub code_challenge_method: String,
+    pub code_challenge_method: CodeChallengeMethod,
     pub authentication_code: String,
 }
 
@@ -26,6 +44,8 @@ impl Pkce {
         redirect_uri: String,
         state: String,
         scope: Vec<Scope>,
+        code_challenge: String,
+        code_challenge_method: CodeChallengeMethod,
     ) -> Self {
         let authentication_code = Self::generate_authentication_code();
 
@@ -35,9 +55,8 @@ impl Pkce {
             redirect_uri,
             state,
             scope,
-            code_verifier: "".to_string(),
-            code_challenge: "".to_string(),
-            code_challenge_method: "".to_string(),
+            code_challenge,
+            code_challenge_method,
             authentication_code,
         }
     }
