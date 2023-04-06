@@ -1,3 +1,4 @@
+use openssl::error::ErrorStack;
 use jwt;
 use rocket::http::Status;
 
@@ -15,12 +16,21 @@ pub enum Error {
     InvalidCode,
     InvalidCodeChallengeMethod,
     Jwt(jwt::Error),
+    OpenSSLError(ErrorStack),
 }
 
 impl From<jwt::Error> for Error {
     fn from(e: jwt::Error) -> Self {
         Error::Jwt(e)
     }
+}
+
+impl From<ErrorStack> for Error {
+
+    fn from(e: ErrorStack) -> Self {
+        Error::OpenSSLError(e)
+    }
+
 }
 
 impl From<Error> for Status {
@@ -38,6 +48,7 @@ impl From<Error> for Status {
             Error::InvalidCode => Status::Forbidden,
             Error::InvalidCodeChallengeMethod => Status::BadRequest,
             Error::Jwt(_) => Status::Unauthorized,
+            Error::OpenSSLError(_) => Status::InternalServerError,
         }
     }
 }

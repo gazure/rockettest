@@ -16,6 +16,7 @@ pub mod pkce;
 pub mod scopes;
 pub mod server;
 pub mod token;
+pub mod jwk;
 
 use client::{Client, Clients};
 use error::Error;

@@ -1,18 +1,32 @@
 use hmac::{Hmac, Mac};
-use jwt::{token as jwt_token, Header, Token, VerifyWithKey};
+use jwt::{token as jwt_token, Header, PKeyWithDigest, Token, VerifyWithKey};
+use openssl::bn::BigNum;
+use openssl::hash::MessageDigest;
+use openssl::pkey::PKey;
+use openssl::rsa::Rsa;
 use rocket::http::Status;
 use rocket::request::{self, FromRequest, Outcome, Request};
 use sha2::Sha256;
 use std::collections::BTreeMap;
+use std::str;
 use uuid::Uuid;
 
+use crate::config::KEY;
 use crate::oauth::error::Error;
 
 pub struct ClientJwt(Token<Header, BTreeMap<String, String>, jwt_token::Verified>);
 
 impl ClientJwt {
     fn parse(token: &str) -> Result<Self, Error> {
-        let key: Hmac<Sha256> = Hmac::new_from_slice(b"some-secret").unwrap();
+        let n = BigNum::from_hex_str(&KEY.n)?;
+        let e = BigNum::from_hex_str(&KEY.e)?;
+        let rsa = Rsa::from_public_components(n, e)?;
+        let cert = PKey::from_rsa(rsa)?;
+
+        let key = PKeyWithDigest {
+            key: cert,
+            digest: MessageDigest::sha256(),
+        };
         let token: Token<Header, BTreeMap<String, String>, _> = token.verify_with_key(&key)?;
         Ok(Self(token))
     }

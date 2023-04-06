@@ -1,10 +1,12 @@
 use chrono;
-use hmac::{Hmac, Mac};
-use jwt::SignWithKey;
-use sha2::Sha256;
+use jwt::{PKeyWithDigest, SignWithKey, Header, Token as JwtToken, algorithm::AlgorithmType};
+use openssl::hash::MessageDigest;
 use std::collections::BTreeMap;
 use uuid::Uuid;
+use lazy_static::lazy_static;
 
+use crate::config::KEY;
+use crate::oauth::jwk;
 use crate::oauth::client::Client;
 use crate::oauth::error::Error;
 use crate::oauth::scopes::Scope;
@@ -12,13 +14,12 @@ use crate::oauth::token::Token;
 
 const TOKEN_TTL: i64 = 3600;
 
+
 pub async fn generate(
     scopes: Vec<Scope>,
     client: Client,
     user_id: Option<Uuid>,
 ) -> Result<Token, Error> {
-    // TODO: some-secret should be more secret than this
-    let key: Hmac<Sha256> = Hmac::new_from_slice(b"some-secret").unwrap();
     let mut claims = BTreeMap::new();
     let now = chrono::offset::Utc::now().timestamp();
     let iat = now.to_string();
@@ -38,12 +39,20 @@ pub async fn generate(
         .map(|s| s.to_string())
         .collect::<Vec<String>>()
         .join(" ");
-    claims.insert("scopes", scopes_string.clone());
 
-    let token_str = claims
-        .sign_with_key(&key)
-        .map_err(|_| Error::InvalidToken)?;
-    Ok(Token::new(token_str, TOKEN_TTL, scopes_string, None))
+    claims.insert("scopes", scopes_string.clone());
+    let key = PKeyWithDigest {
+        digest: MessageDigest::sha256(),
+        key: KEY.key.clone(),
+    };
+
+    let header = Header {
+        algorithm: KEY.alg,
+        key_id: Some(KEY.kid.to_string()),
+        ..Default::default()
+    };
+    let jwt = JwtToken::new(header, claims).sign_with_key(&key).unwrap();
+    Ok(Token::new(jwt.as_str().into(), TOKEN_TTL, scopes_string, None))
 }
 
 #[cfg(test)]
