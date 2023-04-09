@@ -1,5 +1,5 @@
-use openssl::error::ErrorStack;
 use jwt;
+use openssl::error::ErrorStack;
 use rocket::http::Status;
 
 #[derive(Debug)]
@@ -26,11 +26,9 @@ impl From<jwt::Error> for Error {
 }
 
 impl From<ErrorStack> for Error {
-
     fn from(e: ErrorStack) -> Self {
         Error::OpenSSLError(e)
     }
-
 }
 
 impl From<Error> for Status {

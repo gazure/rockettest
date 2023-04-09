@@ -8,9 +8,8 @@ use rocket_dyn_templates::Template;
 
 mod account;
 mod config;
-mod oauth;
 mod decks;
-
+mod oauth;
 
 #[get("/")]
 fn index() -> Value {

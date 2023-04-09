@@ -12,16 +12,16 @@ pub mod client_jwt;
 pub mod error;
 pub mod forms;
 pub mod grant_types;
+pub mod jwk;
 pub mod pkce;
 pub mod scopes;
 pub mod server;
 pub mod token;
-pub mod jwk;
 
+use crate::config::KEY;
 use client::{Client, Clients};
 use error::Error;
 use forms::{RegisterRequest, TokenRequestForm};
-use crate::config::KEY;
 
 #[post("/token", data = "<token_request>")]
 async fn token_endpoint(

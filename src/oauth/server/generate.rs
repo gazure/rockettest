@@ -1,5 +1,5 @@
 use chrono;
-use jwt::{PKeyWithDigest, SignWithKey, Header, Token as JwtToken};
+use jwt::{Header, PKeyWithDigest, SignWithKey, Token as JwtToken};
 use openssl::hash::MessageDigest;
 use std::collections::BTreeMap;
 use uuid::Uuid;
@@ -11,7 +11,6 @@ use crate::oauth::scopes::Scope;
 use crate::oauth::token::Token;
 
 const TOKEN_TTL: i64 = 3600;
-
 
 pub async fn generate(
     scopes: Vec<Scope>,
@@ -50,7 +49,12 @@ pub async fn generate(
         ..Default::default()
     };
     let jwt = JwtToken::new(header, claims).sign_with_key(&key).unwrap();
-    Ok(Token::new(jwt.as_str().into(), TOKEN_TTL, scopes_string, None))
+    Ok(Token::new(
+        jwt.as_str().into(),
+        TOKEN_TTL,
+        scopes_string,
+        None,
+    ))
 }
 
 #[cfg(test)]

@@ -1,6 +1,6 @@
+use crate::oauth::jwk;
 use lazy_static::lazy_static;
 use std::env::var;
-use crate::oauth::jwk;
 
 fn get_password_cost() -> u32 {
     let cost = var("PASSWORD_COST").unwrap_or("10".to_string());
