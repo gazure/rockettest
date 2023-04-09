@@ -9,6 +9,7 @@ use rocket_dyn_templates::Template;
 mod account;
 mod config;
 mod oauth;
+mod decks;
 
 
 #[get("/")]
@@ -84,6 +85,7 @@ async fn rocket() -> _ {
         .attach(Template::fairing())
         .attach(oauth::stage().await)
         .attach(account::stage().await)
+        .attach(decks::stage().await)
         .register(
             "/oauth",
             catchers![

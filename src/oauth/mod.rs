@@ -21,6 +21,7 @@ pub mod jwk;
 use client::{Client, Clients};
 use error::Error;
 use forms::{RegisterRequest, TokenRequestForm};
+use crate::config::KEY;
 
 #[post("/token", data = "<token_request>")]
 async fn token_endpoint(
@@ -132,6 +133,13 @@ async fn delete_client(
     Ok(NoContent)
 }
 
+#[get("/keys")]
+async fn get_keys() -> Value {
+    json!({
+        "keys": [*KEY]
+    })
+}
+
 pub async fn stage() -> rocket::fairing::AdHoc {
     let client_storage = client::init_state().await;
     let pkce_storage = pkce::PkceStorage::new();
@@ -145,7 +153,8 @@ pub async fn stage() -> rocket::fairing::AdHoc {
                     get_client,
                     delete_client,
                     authorize,
-                    submit_authorize_form
+                    submit_authorize_form,
+                    get_keys
                 ],
             )
             .manage(client_storage)

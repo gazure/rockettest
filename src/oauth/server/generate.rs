@@ -1,12 +1,10 @@
 use chrono;
-use jwt::{PKeyWithDigest, SignWithKey, Header, Token as JwtToken, algorithm::AlgorithmType};
+use jwt::{PKeyWithDigest, SignWithKey, Header, Token as JwtToken};
 use openssl::hash::MessageDigest;
 use std::collections::BTreeMap;
 use uuid::Uuid;
-use lazy_static::lazy_static;
 
 use crate::config::KEY;
-use crate::oauth::jwk;
 use crate::oauth::client::Client;
 use crate::oauth::error::Error;
 use crate::oauth::scopes::Scope;

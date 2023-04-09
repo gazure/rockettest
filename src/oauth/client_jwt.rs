@@ -1,4 +1,3 @@
-use hmac::{Hmac, Mac};
 use jwt::{token as jwt_token, Header, PKeyWithDigest, Token, VerifyWithKey};
 use openssl::bn::BigNum;
 use openssl::hash::MessageDigest;
@@ -6,7 +5,6 @@ use openssl::pkey::PKey;
 use openssl::rsa::Rsa;
 use rocket::http::Status;
 use rocket::request::{self, FromRequest, Outcome, Request};
-use sha2::Sha256;
 use std::collections::BTreeMap;
 use std::str;
 use uuid::Uuid;
@@ -18,8 +16,8 @@ pub struct ClientJwt(Token<Header, BTreeMap<String, String>, jwt_token::Verified
 
 impl ClientJwt {
     fn parse(token: &str) -> Result<Self, Error> {
-        let n = BigNum::from_hex_str(&KEY.n)?;
-        let e = BigNum::from_hex_str(&KEY.e)?;
+        let n = BigNum::from_dec_str(&KEY.n)?;
+        let e = BigNum::from_dec_str(&KEY.e)?;
         let rsa = Rsa::from_public_components(n, e)?;
         let cert = PKey::from_rsa(rsa)?;
 
@@ -43,6 +41,10 @@ impl ClientJwt {
             },
             None => Err(Error::InvalidResourceAccess),
         }
+    }
+
+    pub fn get_claim(&self, key: &str) -> Option<String> {
+        self.0.claims().get(key).map(|s| s.to_string())
     }
 }
 
