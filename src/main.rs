@@ -1,6 +1,7 @@
 #[macro_use]
 extern crate rocket;
 
+use sqlx::mysql::MySqlPool;
 use rocket::http::Status;
 use rocket::response::status::Custom;
 use rocket::serde::json::{json, Value};
@@ -14,6 +15,19 @@ mod oauth;
 #[get("/")]
 fn index() -> Value {
     json!({})
+}
+
+#[get("/dbping")]
+async fn ping() -> Value {
+    let pool = MySqlPool::connect("mysql://root:secret@localhost:3336/oauth").await.unwrap();
+
+    let row: (i64,) = sqlx::query_as("SELECT ?")
+        .bind(150_i64)
+        .fetch_one(&pool).await.unwrap();
+
+    json!({
+        "value": row
+    })
 }
 
 #[get("/health")]
@@ -95,7 +109,7 @@ async fn rocket() -> _ {
                 internal_server_error
             ],
         )
-        .mount("/", routes![index, health, status])
+        .mount("/", routes![index, health, status, ping])
 }
 
 #[cfg(test)]
