@@ -60,7 +60,7 @@ mod test {
     fn test_new() {
         let jwk = Jwk::new().unwrap();
         assert_eq!(jwk.kty, JwkKeyType::Rsa);
-        assert_eq!(jwk.alg, JwkAlg::RS256);
+        assert_eq!(jwk.alg, AlgorithmType::Rs256);
         assert_eq!(jwk.pk_use, PublicKeyUse::Sig);
     }
 }
